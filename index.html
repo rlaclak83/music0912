@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사용 가능 음원 목록</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        #search {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        #searchInput {
+            flex-grow: 1;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+        #refreshBtn {
+            background-color: #f0ad4e;
+        }
+        #musicList {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        #musicList th, #musicList td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        #musicList th {
+            background-color: #f2f2f2;
+            cursor: pointer;
+        }
+        #musicList tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        #musicList tr:hover {
+            background-color: #f5f5f5;
+        }
+        .download-btn, .play-btn {
+            background-color: #008CBA;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 2px 2px;
+            cursor: pointer;
+        }
+        .mood {
+            display: inline-block;
+            background-color: #ddd;
+            padding: 2px 5px;
+            margin: 2px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .playing {
+            background-color: #4CAF50;
+        }
+        #pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        #pagination button {
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>사용 가능 음원 목록</h1>
+        
+        <div id="search">
+            <input type="text" id="searchInput" placeholder="음원 검색 (트랙명, ISRC, 분위기)">
+            <button onclick="searchMusic()">검색</button>
+            <button id="refreshBtn" onclick="refreshList()">새로고침</button>
+        </div>
+
+        <table id="musicList">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">트랙명</th>
+                    <th onclick="sortTable(1)">ISRC</th>
+                    <th onclick="sortTable(2)">분위기</th>
+                    <th>재생</th>
+                    <th>다운로드</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 음원 목록은 JavaScript로 동적으로 추가됩니다 -->
+            </tbody>
+        </table>
+
+        <div id="pagination"></div>
+    </div>
+
+    <script>
+        // 전체 음원 데이터
+        const musicData = [
+						  { name: "Autumn Memories", isrc: "KSA012343537", mood: "#분위기있는, #신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312135/KSA012343537.wav" },
+						  { name: "Midnight Magic", isrc: "KSA012343538", mood: "#급박한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312135/KSA012343538.wav" },
+						  { name: "Mystery Show", isrc: "KSA012343539", mood: "#호기심", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312135/KSA012343539.wav" },
+						  { name: "Night Kitty", isrc: "KSA012343540", mood: "#긴장되는, #호기심", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312135/KSA012343540.wav" },
+						  { name: "Sleepy Rabbit", isrc: "KSA012343541", mood: "#통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312135/KSA012343541.wav" },
+						  { name: "Pizza Time", isrc: "KSA012343530", mood: "#통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312134/KSA012343530.wav" },
+						  { name: "Boring Cat", isrc: "KSA012343531", mood: "#호기심, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312134/KSA012343531.wav" },
+						  { name: "Cute boy", isrc: "KSA012343532", mood: "#통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312134/KSA012343532.wav" },
+						  { name: "Game Day", isrc: "KSA012343533", mood: "#통통튀는, #즐거움", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312134/KSA012343533.wav" },
+						  { name: "Good things", isrc: "KSA012343534", mood: "#호기심", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312134/KSA012343534.wav" },
+						  { name: "Smile", isrc: "KSA012343535", mood: "#명랑", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312134/KSA012343535.wav" },
+						  { name: "Sunny Sky", isrc: "KSA012343536", mood: "#쾌활", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312134/KSA012343536.wav" },
+						  { name: "Tension", isrc: "KSA012343522", mood: "#EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312133/KSA012343522.wav" },
+						  { name: "After all themes went out", isrc: "KSA012343523", mood: "#EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312133/KSA012343523.wav" },
+						  { name: "Afterwhile", isrc: "KSA012343524", mood: "#EDM, #웅장한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312133/KSA012343524.wav" },
+						  { name: "Shine", isrc: "KSA012343525", mood: "#EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312133/KSA012343525.wav" },
+						  { name: "Alive", isrc: "KSA012343526", mood: "#EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312133/KSA012343526.wav" },
+						  { name: "Cyber Sky", isrc: "KSA012343527", mood: "#EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312133/KSA012343527.wav" },
+						  { name: "Lost Universe", isrc: "KSA012343528", mood: "#EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312133/KSA012343528.wav" },
+						  { name: "Dinner show", isrc: "KSA012343529", mood: "#EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/312133/KSA012343529.wav" },
+						  { name: "큐티파티 (CUTIE PARTY)", isrc: "KSA012340987", mood: "#신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/309836/KSA012340987.wav" },
+						  { name: "큐티파티 (CUTIE PARTY) (Instrumental)", isrc: "KSA012340988", mood: "#신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/309836/KSA012340988.wav" },
+						  { name: "큐티파티 (CUTIE PARTY) (FADE VERSION)", isrc: "KSA012340989", mood: "#신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/309836/KSA012340989.wav" },
+						  { name: "큐티파티 (CUTIE PARTY) (GAP VERSION)", isrc: "KSA012340990", mood: "#신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/309836/KSA012340990.wav" },
+						  { name: "Leaked flavor", isrc: "KSA012337794", mood: "#몽환", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308387/KSA012337794.wav" },
+						  { name: "Love or hate", isrc: "KSA012337795", mood: "#잔잔한, #몽환", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308387/KSA012337795.wav" },
+						  { name: "Midnight Espresso", isrc: "KSA012337796", mood: "#몽환, #슬픈", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308387/KSA012337796.wav" },
+						  { name: "Nap in the rain", isrc: "KSA012337797", mood: "#잔잔한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308387/KSA012337797.wav" },
+						  { name: "Nonsence", isrc: "KSA012337798", mood: "#분위기있는, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308387/KSA012337798.wav" },
+						  { name: "Numberless", isrc: "KSA012337799", mood: "#통통튀는, #몽환", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308387/KSA012337799.wav" },
+						  { name: "Night Chill", isrc: "KSA012337788", mood: "#잔잔한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308386/KSA012337788.wav" },
+						  { name: "Underworld", isrc: "KSA012337789", mood: "#분위기있는, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308386/KSA012337789.wav" },
+						  { name: "Best Sleep", isrc: "KSA012337790", mood: "#슬픈, #잔잔한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308386/KSA012337790.wav" },
+						  { name: "Forgotten night", isrc: "KSA012337791", mood: "#분위기있는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308386/KSA012337791.wav" },
+						  { name: "Hesitate", isrc: "KSA012337792", mood: "#잔잔한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308386/KSA012337792.wav" },
+						  { name: "Kind of Sweet", isrc: "KSA012337793", mood: "#통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308386/KSA012337793.wav" },
+						  { name: "Girl's Dream", isrc: "KSA012337780", mood: "#잔잔한, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308385/KSA012337780.wav" },
+						  { name: "Happy Daily", isrc: "KSA012337781", mood: "#호기심", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308385/KSA012337781.wav" },
+						  { name: "Funk Moment", isrc: "KSA012337782", mood: "#통통튀는, #EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308385/KSA012337782.wav" },
+						  { name: "Next Time", isrc: "KSA012337783", mood: "#EDM, #웅장한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308385/KSA012337783.wav" },
+						  { name: "Zero", isrc: "KSA012337784", mood: "#EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308385/KSA012337784.wav" },
+						  { name: "Fear of the dark", isrc: "KSA012337785", mood: "#급박한, #긴장되는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308385/KSA012337785.wav" },
+						  { name: "Fallen City", isrc: "KSA012337786", mood: "#무거움, #몽환", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308385/KSA012337786.wav" },
+						  { name: "Dark Chamber", isrc: "KSA012337787", mood: "#분위기있는, #몽환", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/308385/KSA012337787.wav" },
+						  { name: "Moscato mule", isrc: "KSA012331717", mood: "#통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/306006/KSA012331717.wav" },
+						  { name: "Very nervous smile", isrc: "KSA012331718", mood: "#호기심", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/306006/KSA012331718.wav" },
+						  { name: "Cold Winter", isrc: "KSA012331719", mood: "#몽환, #EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/306006/KSA012331719.wav" },
+						  { name: "Hold Up", isrc: "KSA012331720", mood: "#통통튀는, #EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/306006/KSA012331720.wav" },
+						  { name: "Homeground", isrc: "KSA012331721", mood: "#EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/306006/KSA012331721.wav" },
+						  { name: "Mild Coffee", isrc: "KSA012331722", mood: "#EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/306006/KSA012331722.wav" },
+						  { name: "Silver dope", isrc: "KSA012331723", mood: "#급박한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/306006/KSA012331723.wav" },
+						  { name: "Echos in the Abyss", isrc: "KSA012331702", mood: "#공포, #긴장되는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305995/KSA012331702.wav" },
+						  { name: "Horror Mysrtery", isrc: "KSA012331703", mood: "#공포", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305995/KSA012331703.wav" },
+						  { name: "Midnight Mystery", isrc: "KSA012331704", mood: "#급박한, #공포", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305995/KSA012331704.wav" },
+						  { name: "Shadowed Whispers", isrc: "KSA012331705", mood: "#웅장한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305995/KSA012331705.wav" },
+						  { name: "Twilight's Ticking", isrc: "KSA012331706", mood: "#급박한, #긴장되는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305995/KSA012331706.wav" },
+						  { name: "City Reflections", isrc: "KSA012331707", mood: "#밝은, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305994/KSA012331707.wav" },
+						  { name: "Stardust Dreams", isrc: "KSA012331708", mood: "#긴장되는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305994/KSA012331708.wav" },
+						  { name: "Timeless Flow", isrc: "KSA012331709", mood: "#분위기있는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305994/KSA012331709.wav" },
+						  { name: "Twilight Whisper", isrc: "KSA012331710", mood: "#EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305994/KSA012331710.wav" },
+						  { name: "Urban Glow", isrc: "KSA012331711", mood: "#밝은, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305994/KSA012331711.wav" },
+						  { name: "Coconut", isrc: "KSA012331712", mood: "#명랑", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305994/KSA012331712.wav" },
+						  { name: "Comedy without laugh", isrc: "KSA012331713", mood: "#쾌활", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305994/KSA012331713.wav" },
+						  { name: "Liquid animal", isrc: "KSA012331714", mood: "#밝은", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/305994/KSA012331714.wav" },
+						  { name: "Caramel Macchiato", isrc: "KSA012327698", mood: "#쾌활", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304284/KSA012327698.wav" },
+						  { name: "Jazz Vibe", isrc: "KSA012327699", mood: "#신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304284/KSA012327699.wav" },
+						  { name: "Mocha Cookie", isrc: "KSA012327700", mood: "#통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304284/KSA012327700.wav" },
+						  { name: "Mojito", isrc: "KSA012327701", mood: "#통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304284/KSA012327701.wav" },
+						  { name: "Swift Swing", isrc: "KSA012327702", mood: "#통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304284/KSA012327702.wav" },
+						  { name: "Puls Paradise", isrc: "KSA012327689", mood: "#분위기있는, #몽환", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304283/KSA012327689.wav" },
+						  { name: "Time", isrc: "KSA012327690", mood: "#EDM, #신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304283/KSA012327690.wav" },
+						  { name: "Last", isrc: "KSA012327691", mood: "#웅장한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304283/KSA012327691.wav" },
+						  { name: "Heavy Walk", isrc: "KSA012327692", mood: "#EDM, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304283/KSA012327692.wav" },
+						  { name: "In the Mirror", isrc: "KSA012327693", mood: "#EDM, #분위기있는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304283/KSA012327693.wav" },
+						  { name: "Last Touch", isrc: "KSA012327694", mood: "#EDM, #웅장한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304283/KSA012327694.wav" },
+						  { name: "Shadow Beats", isrc: "KSA012327695", mood: "#급박한, #EDM", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304283/KSA012327695.wav" },
+						  { name: "Street Sway", isrc: "KSA012327696", mood: "#EDM, #몽환", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304283/KSA012327696.wav" },
+						  { name: "Frist Daily", isrc: "KSA012327682", mood: "#밝은", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304281/KSA012327682.wav" },
+						  { name: "Imagine", isrc: "KSA012327683", mood: "#호기심", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304281/KSA012327683.wav" },
+						  { name: "Little Smile", isrc: "KSA012327684", mood: "#밝은, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304281/KSA012327684.wav" },
+						  { name: "Picture Diary", isrc: "KSA012327685", mood: "#호기심, #명랑", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304281/KSA012327685.wav" },
+						  { name: "Winter Angel", isrc: "KSA012327686", mood: "#밝은, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304281/KSA012327686.wav" },
+						  { name: "Electric Energy", isrc: "KSA012327687", mood: "#EDM, #쾌활", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304281/KSA012327687.wav" },
+						  { name: "Over the Clouds", isrc: "KSA012327688", mood: "#EDM, #명랑", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/304281/KSA012327688.wav" },
+						  { name: "Gentle Whispers", isrc: "KSA012324096", mood: "#잔잔한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/302966/KSA012324096.wav" },
+						  { name: "Graceful Tranquility", isrc: "KSA012324097", mood: "#잔잔한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/302966/KSA012324097.wav" },
+						  { name: "Charm of Stillness", isrc: "KSA012324098", mood: "#밝은", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/302966/KSA012324098.wav" },
+						  { name: "Enchanting Serenity", isrc: "KSA012324099", mood: "#밝은, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/302966/KSA012324099.wav" },
+						  { name: "Aurora Aria", isrc: "KSA012324100", mood: "#호기심, #잔잔한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/302966/KSA012324100.wav" },
+						  { name: "Luminescent Lullaby", isrc: "KSA012324101", mood: "#분위기있는, #잔잔한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/302966/KSA012324101.wav" },
+						  { name: "Whispering Willow", isrc: "KSA012324102", mood: "#잔잔한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/302966/KSA012324102.wav" },
+						  { name: "여름바다 속으로 (Into the Summer Ocean)", isrc: "KSA012323144", mood: "#신나는, #명랑", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/288515/KSA012323144.wav" },
+						  { name: "Nobou", isrc: "KSA012320565", mood: "#몽환", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/287484/KSA012320565.wav" },
+						  { name: "Monkey Island", isrc: "KSA012320566", mood: "#신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/287484/KSA012320566.wav" },
+						  { name: "Cute Cat", isrc: "KSA012316482", mood: "#명랑, #밝은", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/286523/KSA012316482.wav" },
+						  { name: "Eternal Moment", isrc: "KSA012316483", mood: "#몽환, #분위기있는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/286523/KSA012316483.wav" },
+						  { name: "Last Time", isrc: "KSA012316484", mood: "#잔잔한, #몽환", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/286523/KSA012316484.wav" },
+						  { name: "Light Room", isrc: "KSA012316485", mood: "#EDM, #신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/286523/KSA012316485.wav" },
+						  { name: "Nostalgia", isrc: "KSA012316486", mood: "#즐거움, #감동적인", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/286523/KSA012316486.wav" },
+						  { name: "Old Story", isrc: "KSA012316487", mood: "#잔잔한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/286523/KSA012316487.wav" },
+						  { name: "Ready to Rock", isrc: "KSA012316488", mood: "#EDM, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/286523/KSA012316488.wav" },
+						  { name: "Red Jazz", isrc: "KSA012316489", mood: "#쾌활, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/286523/KSA012316489.wav" },
+						  { name: "Sleepy Bear", isrc: "KSA012316490", mood: "#명랑", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/286523/KSA012316490.wav" },
+						  { name: "Tokyo Night", isrc: "KSA012316491", mood: "#신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/286523/KSA012316491.wav" },
+						  { name: "Afternoon Horizon", isrc: "KSA012313349", mood: "#슬픈, #감동적인", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/285490/KSA012313349.wav" },
+						  { name: "Tropical Seas", isrc: "KSA012312540", mood: "#통통튀는, #밝은", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/285171/KSA012312540.wav" },
+						  { name: "Good Day", isrc: "KSA012312541", mood: "#호기심, #명랑", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/285171/KSA012312541.wav" },
+						  { name: "Funky Time", isrc: "KSA012312542", mood: "#재밌는, #신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/285171/KSA012312542.wav" },
+						  { name: "Toys Memory", isrc: "KSA012312543", mood: "#쾌활, #신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/285171/KSA012312543.wav" },
+						  { name: "Year's End Festival", isrc: "KSA012312544", mood: "#명랑, #호기심", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/285171/KSA012312544.wav" },
+						  { name: "Bee Farm", isrc: "KSA012312553", mood: "#명랑, #밝은", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/285170/KSA012312553.wav" },
+						  { name: "Final Impact", isrc: "KSA012312554", mood: "#긴장되는, #급박한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/285170/KSA012312554.wav" },
+						  { name: "Keep Rolling", isrc: "KSA012312555", mood: "#감동적인", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/285170/KSA012312555.wav" },
+						  { name: "Funny Tune", isrc: "KSA012312556", mood: "#신나는, #명랑", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/285170/KSA012312556.wav" },
+						  { name: "Little Butterfly", isrc: "KSA012312557", mood: "#밝은, #잔잔한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/285170/KSA012312557.wav" },
+						  { name: "Plastic Waves", isrc: "KSA012310294", mood: "#EDM, #밝은", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284461/KSA012310294.wav" },
+						  { name: "Night Crystal", isrc: "KSA012310293", mood: "#EDM, #신나는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284461/KSA012310293.wav" },
+						  { name: "Platonic Love", isrc: "KSA012310295", mood: "#감동적인", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284461/KSA012310295.wav" },
+						  { name: "Summer Dance", isrc: "KSA012310296", mood: "#명랑, #밝은", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284461/KSA012310296.wav" },
+						  { name: "Rainy Street", isrc: "KSA012310297", mood: "#분위기있는, #슬픈", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284461/KSA012310297.wav" },
+						  { name: "Bright Energy", isrc: "KSA012310289", mood: "#밝은, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284460/KSA012310289.wav" },
+						  { name: "Cookie", isrc: "KSA012310288", mood: "#통통튀는, #명랑", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284460/KSA012310288.wav" },
+						  { name: "So cute", isrc: "KSA012310287", mood: "#명랑", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284460/KSA012310287.wav" },
+						  { name: "Cityscape", isrc: "KSA012310290", mood: "#밝은, #명랑", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284460/KSA012310290.wav" },
+						  { name: "Critical Error", isrc: "KSA012310291", mood: "#EDM, #분위기있는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284460/KSA012310291.wav" },
+						  { name: "Electric Breeze", isrc: "KSA012310292", mood: "#EDM, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284460/KSA012310292.wav" },
+						  { name: "My Lady", isrc: "KSA012310286", mood: "#분위기있는, #반전", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284459/KSA012310286.wav" },
+						  { name: "Killing Point", isrc: "KSA012310284", mood: "#EDM, #밝은", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284459/KSA012310284.wav" },
+						  { name: "Fast Track", isrc: "KSA012310283", mood: "#신나는, #밝은", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284459/KSA012310283.wav" },
+						  { name: "Minuet for you", isrc: "KSA012310285", mood: "#명랑, #통통튀는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284459/KSA012310285.wav" },
+						  { name: "1 Hour", isrc: "KSA012310281", mood: "#웅장한, #긴장되는", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284459/KSA012310281.wav" },
+						  { name: "Futuristic Road", isrc: "KSA012310282", mood: "#급박한, #웅장한", downloadUrl: "https://cms-live-storage.s3.ap-northeast-2.amazonaws.com/MusicUP_Client/284459/KSA012310282.wav" }
+						];
+
+        let currentAudio = null;
+        let currentPage = 1;
+        const itemsPerPage = 20;
+
+        function displayMusicList(data, page = 1) {
+            const tbody = document.querySelector("#musicList tbody");
+            tbody.innerHTML = '';
+            
+            const start = (page - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const paginatedData = data.slice(start, end);
+            
+            paginatedData.forEach(music => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = music.name;
+                row.insertCell(1).textContent = music.isrc;
+                
+                const moodCell = row.insertCell(2);
+                music.mood.split(', ').forEach(mood => {
+                    const span = document.createElement('span');
+                    span.className = 'mood';
+                    span.textContent = mood.replace('#', '');
+                    moodCell.appendChild(span);
+                });
+
+                const playCell = row.insertCell(3);
+                const playBtn = document.createElement("button");
+                playBtn.textContent = "재생";
+                playBtn.className = "play-btn";
+                playBtn.onclick = function() {
+                    togglePlay(music.downloadUrl, playBtn);
+                };
+                playCell.appendChild(playBtn);
+
+                const downloadCell = row.insertCell(4);
+                const downloadBtn = document.createElement("a");
+                downloadBtn.textContent = "다운로드";
+                downloadBtn.className = "download-btn";
+                downloadBtn.href = music.downloadUrl;
+                downloadBtn.target = "_blank";
+                downloadCell.appendChild(downloadBtn);
+            });
+
+            displayPagination(data.length, page);
+        }
+
+        function displayPagination(totalItems, currentPage) {
+            const paginationElement = document.getElementById('pagination');
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            
+            let paginationHtml = '';
+            
+            if (currentPage > 1) {
+                paginationHtml += `<button onclick="changePage(${currentPage - 1})">이전</button>`;
+            }
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === currentPage) {
+                    paginationHtml += `<button disabled>${i}</button>`;
+                } else {
+                    paginationHtml += `<button onclick="changePage(${i})">${i}</button>`;
+                }
+            }
+            
+            if (currentPage < totalPages) {
+                paginationHtml += `<button onclick="changePage(${currentPage + 1})">다음</button>`;
+            }
+            
+            paginationElement.innerHTML = paginationHtml;
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            displayMusicList(musicData, currentPage);
+        }
+
+        function togglePlay(url, button) {
+            if (currentAudio && currentAudio.src === url) {
+                if (currentAudio.paused) {
+                    currentAudio.play();
+                    button.textContent = "일시정지";
+                    button.classList.add("playing");
+                } else {
+                    currentAudio.pause();
+                    button.textContent = "재생";
+                    button.classList.remove("playing");
+                }
+            } else {
+                if (currentAudio) {
+                    currentAudio.pause();
+                    const prevButton = document.querySelector(".play-btn.playing");
+                    if (prevButton) {
+                        prevButton.textContent = "재생";
+                        prevButton.classList.remove("playing");
+                    }
+                }
+                currentAudio = new Audio(url);
+                currentAudio.play();
+                button.textContent = "일시정지";
+                button.classList.add("playing");
+
+                currentAudio.onended = function() {
+                    button.textContent = "재생";
+                    button.classList.remove("playing");
+                };
+            }
+        }
+
+        function searchMusic() {
+            const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+            const filteredMusic = musicData.filter(music => 
+                music.name.toLowerCase().includes(searchTerm) ||
+                music.isrc.toLowerCase().includes(searchTerm) ||
+                music.mood.toLowerCase().includes(searchTerm)
+            );
+            currentPage = 1;
+            displayMusicList(filteredMusic, currentPage);
+        }
+
+        function sortTable(n) {
+            const table = document.getElementById("musicList");
+            let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            switching = true;
+            dir = "asc";
+            
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    
+                    if (dir == "asc") {
+                        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (dir == "desc") {
+                        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+
+        function refreshList() {
+            document.getElementById("searchInput").value = "";
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            currentPage = 1;
+            displayMusicList(musicData, currentPage);
+        }
+
+        // 초기 음원 목록 표시
+        displayMusicList(musicData, currentPage);
+    </script>
+</body>
+</html>
